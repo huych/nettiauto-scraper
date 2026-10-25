@@ -37,8 +37,7 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
           SEARCH_URL: ${{ secrets.SEARCH_URL }}
-        run: python nettiauto_agent.py
-
+        run: python -u nettiauto_agent.py
       - name: Save state
         if: success()
         run: |
