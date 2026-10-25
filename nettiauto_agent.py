@@ -52,11 +52,34 @@ USER_AGENT = (
 # --------------------------------------------------------------------------
 # HTTP + HTML helpers
 # --------------------------------------------------------------------------
+USE_BROWSER = os.getenv("USE_BROWSER") == "1"
+_browser = {}
+
+
+def _browser_fetch(url):
+    """Load the page in headless Chromium (passes most bot checks that block urllib)."""
+    from playwright.sync_api import sync_playwright
+    if "page" not in _browser:
+        pw = sync_playwright().start()
+        b = pw.chromium.launch(headless=True)
+        ctx = b.new_context(user_agent=USER_AGENT, locale="en-US",
+                            viewport={"width": 1366, "height": 900})
+        _browser.update(pw=pw, b=b, page=ctx.new_page())
+    page = _browser["page"]
+    resp = page.goto(url, wait_until="domcontentloaded", timeout=45_000)
+    if resp is not None and resp.status >= 400:
+        raise RuntimeError(f"HTTP {resp.status}")
+    page.wait_for_timeout(1500)
+    return page.content(), page.url
+
+
 def fetch(url, retries=3):
     """Return (html, final_url)."""
     last = None
     for attempt in range(retries):
         try:
+            if USE_BROWSER:
+                return _browser_fetch(url)
             req = Request(url, headers={
                 "User-Agent": USER_AGENT,
                 "Accept": "text/html,application/xhtml+xml",
@@ -65,7 +88,7 @@ def fetch(url, retries=3):
             with urlopen(req, timeout=30) as r:
                 charset = r.headers.get_content_charset() or "utf-8"
                 return r.read().decode(charset, errors="replace"), r.geturl()
-        except (HTTPError, URLError, TimeoutError) as e:
+        except Exception as e:  # noqa: BLE001
             last = e
             time.sleep(2 * (attempt + 1))
     raise RuntimeError(f"Failed to fetch {url}: {last}")
