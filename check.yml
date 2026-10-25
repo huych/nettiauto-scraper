@@ -1,46 +1,33 @@
-Claude
-
-
-
-
-
-
-
-
-
-
-
-Check · YML
 name: Nettiauto check
- 
+
 on:
   schedule:
-    - cron: "0 */4 * * *"   # every 4 hours (UTC)
-  workflow_dispatch: {}      # lets you run it manually from the Actions tab
- 
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}
+
 permissions:
-  contents: write            # needed to commit state.json
- 
+  contents: write
+
 concurrency:
   group: nettiauto
   cancel-in-progress: false
- 
+
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
- 
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
- 
+
       - name: Install browser
         run: |
           pip install playwright
           playwright install --with-deps chromium
- 
+
       - name: Run agent
         env:
           USE_BROWSER: "1"
@@ -51,13 +38,11 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           SEARCH_URL: ${{ secrets.SEARCH_URL }}
         run: python nettiauto_agent.py
- 
-      - name: Save state (so the next run knows what was already emailed)
+
+      - name: Save state
         if: success()
         run: |
           git config user.name "nettiauto-bot"
           git config user.email "nettiauto-bot@users.noreply.github.com"
           git add state.json
           git diff --cached --quiet || (git commit -m "Update state" && git push)
- 
-Claude finished the response
