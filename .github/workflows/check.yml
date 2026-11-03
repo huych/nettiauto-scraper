@@ -2,7 +2,7 @@ name: Nettiauto check
 
 on:
   schedule:
-    - cron: "0 */4 * * *"
+    - cron: "3 15 * * *"
   workflow_dispatch: {}
 
 permissions:
